@@ -2,7 +2,7 @@ const { loadInput } = require("../../loadInput");
 
 (async function main() {
     const input = await loadInput("./input.txt");
-    const result = countIncreases(input, 3);
+    const result = countIncreases(input.map(n => parseInt(n)), 3);
     console.log(result);
 
     function countIncreases(values, blockSize = 1) {
