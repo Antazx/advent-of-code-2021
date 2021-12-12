@@ -1,33 +1,64 @@
 const { loadInput } = require("../loadInput");
 
 (async function main() {
-    const bingoInput = await loadInput("./input.txt");
-    const { numSequence, boards } = getBingo(bingoInput);
-    const { winner, num } = getWinner(numSequence, boards);
-    const winningValue = winner.reduce((acc, value) => (value != "X" ? acc + value : acc), 0);
-    const result = num * winningValue;
-
-    console.log(result);
-
-    function getWinner(numSequence, boards) {
-        let winner = null;
-        for (let num of numSequence) {
-            markNumberInBoards(num, boards);
-            winner = boards.filter(win);
-            if (winner.length > 0) return { winner: winner.flat(2), num };
+    /** Polyfill filterIndexes*/
+    Array.prototype.filterIndexes = function (callback) {
+        const values = [];
+        for (let index = 0; index < this.length; index++) {
+            if (callback(this[index], index, this)) values.push(index);
         }
+        return values;
+    };
+
+    const bingoInput = await loadInput("/home/user/code-things/advent-of-code-2021/4 -  GiantSquid/input.txt");
+    const { numSequence, boards } = getBingo(bingoInput);
+    const getSum = (acc, value) => (value != "X" ? acc + value : acc);
+
+    const winners = getWinners(numSequence, boards);
+
+    const firstWinner = winners[0];
+    const lastWinner = winners[winners.length - 1];
+    console.log(firstWinner.res);
+    console.log(lastWinner.res);
+
+    function getWinners(numSequence, inputBoards) {
+        let boards = [...inputBoards];
+        let uniqueWinningIndexes = [];
+
+        for (let index = 0; index < numSequence.length && boards.length != uniqueWinningIndexes.length; index++) {
+            let num = numSequence[index];
+            markNumberInBoards(num, boards);
+
+            let numIndexesWinners = boards.filterIndexes(win).map((i) => ({ i, num }));
+            numIndexesWinners.forEach(({ i, num }) => {
+                if (!uniqueWinningIndexes.find((ui) => ui.i === i))
+                    uniqueWinningIndexes.push({
+                        i,
+                        num,
+                        board: [...boards[i]],
+                        res: getResults({ num, board: boards[i] }),
+                    });
+            });
+        }
+
+        return uniqueWinningIndexes;
+    }
+
+    function getResults({ num, board }) {
+        const boardResult = board.reduce((acc, file) => acc + file.reduce(getSum, 0), 0);
+        return boardResult * num;
     }
 
     function win(board) {
         const allX = (line) => line.every((col) => col == "X");
         const hasLine = board.some(allX);
-        if (hasLine) return board;
+        if (hasLine) return true;
 
         const transposedBoard = transpose(board);
         const hasColumn = transposedBoard.some(allX);
-        if (hasColumn) return board;
+        if (hasColumn) return true;
 
-        return null;
+        return false;
     }
 
     function transpose(report) {
